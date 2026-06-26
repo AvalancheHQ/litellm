@@ -484,53 +484,32 @@ class PromptTokensDetailsResult(TypedDict):
 
 
 def _parse_prompt_tokens_details(usage: Usage) -> PromptTokensDetailsResult:
-    cache_hit_tokens = (
-        cast(Optional[int], getattr(usage.prompt_tokens_details, "cached_tokens", 0))
-        or 0
-    )
-    cache_creation_tokens = (
-        cast(
-            Optional[int],
-            getattr(usage.prompt_tokens_details, "cache_creation_tokens", 0),
-        )
-        or 0
-    )
-    cache_creation_token_details = (
-        cast(
-            Optional[CacheCreationTokenDetails],
-            getattr(usage.prompt_tokens_details, "cache_creation_token_details", None),
-        )
-        or None
-    )
+    # Read field values directly from the instance ``__dict__`` to avoid
+    # pydantic's slow ``__getattr__`` fallback. ``PromptTokensDetailsWrapper``
+    # deletes unset optional fields in ``__init__`` (see types/utils.py), so a
+    # plain ``getattr`` on those fields would hit pydantic's expensive
+    # ``BaseModel.__getattr__``/``ModelMetaclass.__getattr__`` path on every
+    # cost computation. ``__dict__.get`` returns the same value for set fields
+    # and the default for deleted/unset ones, without that overhead.
+    details = usage.prompt_tokens_details
+    if details is None:
+        attrs: dict = {}
+    elif isinstance(details, dict):
+        attrs = details
+    else:
+        attrs = getattr(details, "__dict__", None) or {}
+
+    cache_hit_tokens = attrs.get("cached_tokens") or 0
+    cache_creation_tokens = attrs.get("cache_creation_tokens") or 0
+    cache_creation_token_details = attrs.get("cache_creation_token_details") or None
     text_tokens = (
-        cast(Optional[int], getattr(usage.prompt_tokens_details, "text_tokens", None))
-        or 0  # default to prompt tokens, if this field is not set
-    )
-    audio_tokens = (
-        cast(Optional[int], getattr(usage.prompt_tokens_details, "audio_tokens", 0))
-        or 0
-    )
-    image_tokens = (
-        cast(Optional[int], getattr(usage.prompt_tokens_details, "image_tokens", 0))
-        or 0
-    )
-    character_count = (
-        cast(
-            Optional[int],
-            getattr(usage.prompt_tokens_details, "character_count", 0),
-        )
-        or 0
-    )
-    image_count = (
-        cast(Optional[int], getattr(usage.prompt_tokens_details, "image_count", 0)) or 0
-    )
-    video_length_seconds = (
-        cast(
-            Optional[float],
-            getattr(usage.prompt_tokens_details, "video_length_seconds", 0),
-        )
-        or 0.0
-    )
+        attrs.get("text_tokens") or 0
+    )  # default to prompt tokens, if this field is not set
+    audio_tokens = attrs.get("audio_tokens") or 0
+    image_tokens = attrs.get("image_tokens") or 0
+    character_count = attrs.get("character_count") or 0
+    image_count = attrs.get("image_count") or 0
+    video_length_seconds = attrs.get("video_length_seconds") or 0.0
 
     return PromptTokensDetailsResult(
         cache_hit_tokens=cache_hit_tokens,
