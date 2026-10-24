@@ -33,6 +33,11 @@ _IMAGE_RESPONSE_CALL_TYPES = frozenset(
 # Pre-resolved DataResidency enum values for fast membership checks
 _VALID_DATA_RESIDENCIES = frozenset(r.value for r in DataResidency)
 
+# Pre-resolved service-tier key suffixes (e.g. "_auto", "_flex", "_priority").
+# Used to exclude service_tier-specific above-threshold keys without iterating
+# the ServiceTier enum or building f-strings on every key in the hot path.
+_SERVICE_TIER_SUFFIXES = tuple(f"_{st.value}" for st in ServiceTier)
+
 
 def _get_token_detail_value(details: object, key: str) -> Optional[int]:
     if isinstance(details, dict):
@@ -248,7 +253,7 @@ def _get_token_base_cost(
         k
         for k in model_info
         if k.startswith("input_cost_per_token_above_")
-        and not any(k.endswith(f"_{st.value}") for st in ServiceTier)
+        and not k.endswith(_SERVICE_TIER_SUFFIXES)
     ]
     if not threshold_keys:
         return (
